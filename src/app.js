@@ -34,6 +34,48 @@ app.get('/proxy', async (req, res) => {
   }
 })
 
+app.get('/toggl', async (req, res) => {
+  try {
+    const { ticket_description, ticket_id, company_name } = req.query
+
+    const data = {
+      created_with: 'API',
+      description: `#${ticket_id} ${ticket_description}`,
+      tags: [company_name],
+      billable: false,
+      workspace_id: parseInt(process.env.TOGGL_WORKSPACE_ID, 10),
+      duration: -1,
+      start: new Date().toISOString(),
+      stop: null,
+      pid: parseInt(process.env.TOGGL_PROJECT_ID, 10),
+    }
+
+    const config = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      auth: {
+        username: process.env.TOGGL_API_EMAIL,
+        password: process.env.TOGGL_API_PASSWORD,
+      },
+    }
+
+    const response = await axios.post(
+      `https://api.track.toggl.com/api/v9/workspaces/${process.env.TOGGL_WORKSPACE_ID}/time_entries`,
+      data,
+      config
+    )
+
+    res.json(response.data)
+  } catch (error) {
+    console.error(
+      'Error response from Toggl API:',
+      error.response ? error.response.data : error.message
+    )
+    res.status(500).json({ error: 'Error fetching data' })
+  }
+})
+
 app.use('/api/v1', api)
 
 app.use(middlewares.notFound)
